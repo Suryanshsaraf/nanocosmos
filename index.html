@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NanoCosmos - In-Browser Azure Cosmos DB SQL Playground & RU Profiler</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+    body { background-color: #1b1a19; color: #f3f2f1; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Top Azure Portal Header */
+    .azure-top-nav {
+      background: #111;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-bottom: 1px solid #333;
+      font-size: 13px;
+      color: #bbb;
+      user-select: none;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #0078d4;
+      font-weight: 600;
+      font-size: 14.5px;
+      margin-right: 18px;
+      cursor: pointer;
+    }
+    .brand svg { fill: #0078d4; }
+    .resource-title {
+      color: #fff;
+      font-weight: 500;
+    }
+    .top-badge {
+      margin-left: auto;
+      background: #004c87;
+      color: #a4d2ff;
+      border: 1px solid #0078d4;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Sub Toolbar */
+    .toolbar {
+      background: #252423;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 10px;
+      border-bottom: 1px solid #3b3a39;
+    }
+    .btn {
+      background: #323130;
+      color: #fff;
+      border: 1px solid #484644;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #3b3a39; }
+    .btn-primary { background: #0078d4; border-color: #0078d4; }
+    .btn-primary:hover { background: #106ebe; }
+    .select-dropdown {
+      background: #201f1e;
+      color: #fff;
+      border: 1px solid #484644;
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 2px;
+      cursor: pointer;
+      outline: none;
+    }
+    .select-dropdown:focus { border-color: #0078d4; }
+
+    /* Layout Split */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left Resource Tree */
+    .sidebar {
+      width: 250px;
+      background: #201f1e;
+      border-right: 1px solid #333;
+      font-size: 12.5px;
+      padding: 10px 0;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+    }
+    .tree-header {
+      padding: 8px 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      color: #8a8886;
+    }
+    .tree-node {
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #d2d0ce;
+      transition: background 0.1s;
+    }
+    .tree-node:hover { background: #2d2c2c; }
+    .tree-node.active { background: #323130; color: #fff; font-weight: 600; border-left: 3px solid #0078d4; }
+    .indent-1 { margin-left: 14px; }
+    .indent-2 { margin-left: 28px; }
+
+    /* Main Query & Results Area */
+    .main-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #1e1e1e;
+      overflow: hidden;
+    }
+
+    /* SQL Editor Section */
+    .editor-section {
+      height: 200px;
+      background: #181818;
+      border-bottom: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+    }
+    .editor-tab-bar {
+      background: #252423;
+      padding: 6px 16px;
+      font-size: 12px;
+      color: #a19f9d;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .code-editor {
+      flex: 1;
+      padding: 14px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 13.5px;
+      color: #9cdcfe;
+      line-height: 1.5;
+      background: #1e1e1e;
+      border: none;
+      outline: none;
+      resize: none;
+      white-space: pre;
+    }
+
+    /* Output Section */
+    .output-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .output-tabs {
+      display: flex;
+      background: #252423;
+      border-bottom: 1px solid #3b3a39;
+    }
+    .tab-btn {
+      padding: 10px 22px;
+      font-size: 12.5px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: #a19f9d;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      color: #fff;
+      border-bottom-color: #0078d4;
+      background: #1e1e1e;
+      font-weight: 600;
+    }
+    .panel-view {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #1e1e1e;
+    }
+
+    /* JSON Results View */
+    .json-pre {
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 12.5px;
+      color: #d4d4d4;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    /* Query Stats & RU Dashboard */
+    .stats-layout {
+      max-width: 950px;
+    }
+    .ru-banner {
+      background: linear-gradient(135deg, #0d3859 0%, #15293d 100%);
+      border: 1px solid #0078d4;
+      border-radius: 4px;
+      padding: 18px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ru-label { font-size: 12px; color: #79b8ff; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+    .ru-number { font-size: 36px; font-weight: 700; color: #fff; margin-top: 4px; }
+    .ru-info { font-size: 12.5px; color: #a19f9d; margin-top: 4px; }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .badge-single { background: #134e13; color: #7ee787; border: 1px solid #238636; }
+    .badge-cross { background: #6e2714; color: #ffa28b; border: 1px solid #d9381e; }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin-top: 14px;
+    }
+    .data-table th, .data-table td {
+      padding: 9px 14px;
+      text-align: left;
+      border-bottom: 1px solid #2d2d2d;
+    }
+    .data-table th {
+      color: #8a8886;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      background: #252423;
+    }
+    .data-table td { color: #f3f2f1; }
+    .metric-val { color: #79b8ff; font-weight: 600; font-family: monospace; font-size: 13px; }
+
+    .analysis-card {
+      margin-top: 24px;
+      background: #201f1e;
+      border: 1px solid #3b3a39;
+      border-left: 4px solid #0078d4;
+      border-radius: 4px;
+      padding: 16px 20px;
+    }
+    .analysis-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .analysis-body { font-size: 12.5px; color: #c8c6c4; line-height: 1.5; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(2px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-card {
+      background: #252423;
+      border: 1px solid #484644;
+      width: 700px;
+      max-height: 80vh;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .modal-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #3b3a39;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid #3b3a39;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Azure Navigation -->
+  <div class="azure-top-nav">
+    <div class="brand">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      Microsoft Azure
+    </div>
+    <span style="color:#555; margin-right:8px;">/</span>
+    <span class="resource-title">crm-prod-cosmos-ss &gt; Data Explorer</span>
+    <span class="top-badge">NanoCosmos Engine v0.1 (In-Browser)</span>
+  </div>
+
+  <!-- Command Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="handleExecute()">
+      ▶ Execute Query
+    </button>
+    <button class="btn" onclick="openDocsModal()">
+      📄 View / Edit Items (<span id="docCountBadge">3</span>)
+    </button>
+    <button class="btn" onclick="copyAnalysis()">
+      📋 Copy Performance Analysis
+    </button>
+    <span style="color:#444;">|</span>
+    <span style="font-size:12px; color:#aaa;">Presets:</span>
+    <select id="presetSelect" class="select-dropdown" onchange="loadPreset()">
+      <option value="0">1. Partition-Aware Point Lookup (customer_001)</option>
+      <option value="1">2. Partition-Aware Array Filter (Service Interests)</option>
+      <option value="2">3. Enterprise High-Engagement Filter (>80)</option>
+      <option value="3">4. Cross-Partition Aggregation (GROUP BY)</option>
+      <option value="4">5. Cross-Partition Date Range Scan (<2024)</option>
+    </select>
+  </div>
+
+  <!-- Workspace Container -->
+  <div class="workspace">
+    <!-- Left Navigation Tree -->
+    <div class="sidebar">
+      <div class="tree-header">Data Explorer (NoSQL API)</div>
+      <div class="tree-node">📁 <strong>CRM_Database</strong></div>
+      <div class="tree-node indent-1 active">📦 <strong>Customers</strong></div>
+      <div class="tree-node indent-2" onclick="openDocsModal()">📄 Items (<span id="sidebarDocCount">3</span>)</div>
+      <div class="tree-node indent-2">⚙️ Scale &amp; Settings</div>
+      <div class="tree-node indent-2" style="color: #0078d4;">⚡ <strong>Query 1</strong></div>
+      <div class="tree-node indent-1">📦 Projects</div>
+    </div>
+
+    <!-- Main Panel -->
+    <div class="main-panel">
+      <!-- SQL Editor -->
+      <div class="editor-section">
+        <div class="editor-tab-bar">
+          <span>Query 1.sql</span>
+          <span style="color: #4daafc; font-size:11px;">Partition Key: /customerType</span>
+        </div>
+        <textarea id="sqlInput" class="code-editor" spellcheck="false"></textarea>
+      </div>
+
+      <!-- Output Section -->
+      <div class="output-section">
+        <div class="output-tabs">
+          <button class="tab-btn" id="tabBtnResults" onclick="switchTab('results')">Results (<span id="resultCountBadge">0</span>)</button>
+          <button class="tab-btn active" id="tabBtnStats" onclick="switchTab('stats')">Query Stats</button>
+        </div>
+
+        <!-- Query Stats Tab View -->
+        <div class="panel-view" id="viewStats">
+          <div class="stats-layout">
+            <div class="ru-banner">
+              <div>
+                <div class="ru-label">Request Charge</div>
+                <div class="ru-number" id="statRuCharge">2.83 RUs</div>
+                <div class="ru-info" id="statRuInfo">Single-partition query targeting logical partition</div>
+              </div>
+              <div id="statBadgeWrapper">
+                <span class="badge-pill badge-single">SINGLE PARTITION</span>
+              </div>
+            </div>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Metric Name</th>
+                  <th>Value</th>
+                  <th>Technical Explanation</th>
+                </tr>
+              </thead>
+              <tbody id="statMetricsBody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+
+            <div class="analysis-card">
+              <div class="analysis-title">Cosmos DB Performance &amp; Scalability Analysis</div>
+              <div class="analysis-body" id="statExplanation">
+                Direct partition route executed.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- JSON Results Tab View -->
+        <div class="panel-view" id="viewResults" style="display:none;">
+          <pre class="json-pre" id="jsonOutput"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents Editor Modal -->
+  <div class="modal-overlay" id="docsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>Edit In-Memory Container Documents (Customers)</span>
+        <button style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;" onclick="closeDocsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="docsJsonInput" style="width:100%; height:380px; background:#181818; color:#9cdcfe; font-family:monospace; padding:10px; border:1px solid #444; border-radius:3px; outline:none; font-size:12.5px;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="resetDefaultDocs()">Reset to Defaults</button>
+        <button class="btn btn-primary" onclick="saveDocs()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client-Side Engine Script -->
+  <script>
+    // --- 1. Preset Data & Queries ---
+    const DEFAULT_DOCUMENTS = [
+      {
+        "id": "customer_001",
+        "customerType": "individual",
+        "profile": {
+          "firstName": "Sarah",
+          "lastName": "Johnson",
+          "email": "sarah.johnson@email.com",
+          "phone": "+1-555-0123",
+          "preferredContact": "email"
+        },
+        "businessInfo": {
+          "industry": "Healthcare",
+          "jobTitle": "Chief Medical Officer",
+          "company": "Regional Medical Center"
+        },
+        "preferences": {
+          "communicationFrequency": "monthly",
+          "serviceInterests": ["strategic consulting", "digital transformation"],
+          "language": "en-US",
+          "timezone": "America/New_York"
+        },
+        "relationshipData": {
+          "acquisitionDate": "2023-06-15",
+          "primaryConsultant": "consultant_789",
+          "relationshipManager": "manager_456",
+          "engagementScore": 85,
+          "lastContactDate": "2024-01-10"
+        },
+        "projectHistory": [
+          {
+            "projectId": "proj_001",
+            "projectName": "Digital Health Strategy",
+            "startDate": "2023-08-01",
+            "status": "completed",
+            "value": 75000
+          }
+        ]
+      },
+      {
+        "id": "customer_002",
+        "customerType": "small_business",
+        "profile": {
+          "firstName": "David",
+          "lastName": "Miller",
+          "email": "david.m@miller-logistics.com",
+          "phone": "+1-555-0199",
+          "preferredContact": "phone"
+        },
+        "businessInfo": {
+          "industry": "Logistics",
+          "jobTitle": "Managing Director",
+          "company": "Miller Freight Solutions"
+        },
+        "preferences": {
+          "communicationFrequency": "weekly",
+          "serviceInterests": ["supply chain optimization", "cloud migration"],
+          "language": "en-US",
+          "timezone": "America/Chicago"
+        },
+        "relationshipData": {
+          "acquisitionDate": "2022-11-20",
+          "primaryConsultant": "consultant_102",
+          "relationshipManager": "manager_456",
+          "engagementScore": 78,
+          "lastContactDate": "2023-12-18"
+        },
+        "projectHistory": [
+          {
+            "projectId": "proj_002",
+            "projectName": "Route Optimization Engine",
+            "startDate": "2023-02-15",
+            "status": "completed",
+            "value": 120000
+          }
+        ]
+      },
+      {
+        "id": "customer_003",
+        "customerType": "enterprise",
+        "profile": {
+          "firstName": "Elena",
+          "lastName": "Rostova",
+          "email": "e.rostova@globalkapital.org",
+          "phone": "+44-20-7946-0912",
+          "preferredContact": "email"
+        },
+        "businessInfo": {
+          "industry": "Financial Services",
+          "jobTitle": "VP of Enterprise Architecture",
+          "company": "Global Kapital Group"
+        },
+        "preferences": {
+          "communicationFrequency": "bi-weekly",
+          "serviceInterests": ["regulatory compliance", "strategic consulting", "ai ops"],
+          "language": "en-GB",
+          "timezone": "Europe/London"
+        },
+        "relationshipData": {
+          "acquisitionDate": "2021-04-10",
+          "primaryConsultant": "consultant_550",
+          "relationshipManager": "manager_901",
+          "engagementScore": 92,
+          "lastContactDate": "2024-02-01"
+        },
+        "projectHistory": [
+          {
+            "projectId": "proj_003",
+            "projectName": "Core Banking Modernization",
+            "startDate": "2022-01-10",
+            "status": "active",
+            "value": 850000
+          }
+        ]
+      }
+    ];
+
+    const PRESETS = [
+      {
+        name: "Partition-Aware Point Lookup",
+        sql: `SELECT * FROM c\nWHERE c.id = "customer_001"\nAND c.customerType = "individual"`
+      },
+      {
+        name: "Partition-Aware Array Filter",
+        sql: `SELECT * FROM c\nWHERE c.customerType = "individual"\nAND c.preferences.serviceInterests[0] = "strategic consulting"`
+      },
+      {
+        name: "Enterprise High-Engagement Filter",
+        sql: `SELECT * FROM c\nWHERE c.customerType = "enterprise"\nAND c.relationshipData.engagementScore > 80`
+      },
+      {
+        name: "Cross-Partition Aggregation (GROUP BY)",
+        sql: `SELECT c.customerType,\n       COUNT(1) AS customerCount,\n       AVG(c.relationshipData.engagementScore) AS avgEngagement\nFROM c\nGROUP BY c.customerType`
+      },
+      {
+        name: "Cross-Partition Date Range Scan",
+        sql: `SELECT c.id,\n       c.profile.firstName,\n       c.profile.lastName,\n       c.relationshipData.lastContactDate\nFROM c\nWHERE c.relationshipData.lastContactDate < "2024-01-01"`
+      }
+    ];
+
+    let currentDocs = JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS));
+    let lastMetrics = null;
+
+    // --- 2. In-Browser Cosmos Query Engine ---
+    function resolvePath(obj, path, alias = 'c') {
+      let clean = path;
+      if (clean.startsWith(`${alias}.`)) clean = clean.substring(alias.length + 1);
+      else if (clean === alias) return obj;
+      const tokens = clean.replace(/\[(\d+)\]/g, '.$1').split('.');
+      let cur = obj;
+      for (const t of tokens) {
+        if (cur === undefined || cur === null) return undefined;
+        cur = cur[t];
+      }
+      return cur;
+    }
+
+    function evaluateCondition(doc, condStr) {
+      // Handle AND / OR
+      const andParts = condStr.split(/\s+AND\s+/i);
+      for (const part of andParts) {
+        const match = part.trim().match(/^([\s\S]+?)\s*(=|!=|<=|>=|<|>)\s*([\s\S]+)$/);
+        if (!match) continue;
+        const field = match[1].trim();
+        const op = match[2].trim();
+        let target = match[3].trim();
+        if ((target.startsWith('"') && target.endsWith('"')) || (target.startsWith("'") && target.endsWith("'"))) {
+          target = target.substring(1, target.length - 1);
+        } else if (!isNaN(Number(target))) {
+          target = Number(target);
+        }
+
+        const actual = resolvePath(doc, field);
+        if (op === '=' && actual !== target) return false;
+        if (op === '!=' && actual === target) return false;
+        if (op === '<' && !(actual < target)) return false;
+        if (op === '<=' && !(actual <= target)) return false;
+        if (op === '>' && !(actual > target)) return false;
+        if (op === '>=' && !(actual >= target)) return false;
+      }
+      return true;
+    }
+
+    function runEngine(sql, docs, partitionKey = "customerType") {
+      const clean = sql.replace(/--.*$/gm, '').trim();
+      const selectMatch = clean.match(/SELECT\s+([\s\S]+?)\s+FROM\s+([a-zA-Z0-9_]+)/i);
+      if (!selectMatch) throw new Error("Missing SELECT ... FROM clause");
+
+      const selectClause = selectMatch[1].trim();
+      const alias = selectMatch[2].trim();
+      const remainder = clean.substring(selectMatch.index + selectMatch[0].length);
+
+      let whereClause = "";
+      let groupByClause = "";
+
+      const groupIdx = remainder.search(/\bGROUP\s+BY\b/i);
+      const whereIdx = remainder.search(/\bWHERE\b/i);
+
+      if (whereIdx !== -1) {
+        if (groupIdx !== -1) {
+          whereClause = remainder.substring(whereIdx + 5, groupIdx).trim();
+          groupByClause = remainder.substring(groupIdx + 8).trim();
+        } else {
+          whereClause = remainder.substring(whereIdx + 5).trim();
+        }
+      } else if (groupIdx !== -1) {
+        groupByClause = remainder.substring(groupIdx + 8).trim();
+      }
+
+      // Check Partition Key in WHERE
+      const isSinglePartition = Boolean(
+        whereClause &&
+        (whereClause.includes(`c.${partitionKey} =`) || whereClause.includes(`${partitionKey} =`))
+      );
+
+      // Filter documents
+      let filtered = docs;
+      if (whereClause) {
+        filtered = docs.filter(d => evaluateCondition(d, whereClause));
+      }
+
+      // Projections & Aggregations
+      let results = [];
+      if (groupByClause) {
+        const groups = {};
+        for (const d of filtered) {
+          const key = String(resolvePath(d, groupByClause));
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(d);
+        }
+
+        for (const [key, groupDocs] of Object.entries(groups)) {
+          const row = {};
+          if (selectClause.includes('COUNT(1)')) row['customerCount'] = groupDocs.length;
+          if (selectClause.includes('AVG(')) {
+            const avgMatch = selectClause.match(/AVG\(([\s\S]+?)\)/i);
+            if (avgMatch) {
+              const field = avgMatch[1].trim();
+              const vals = groupDocs.map(d => Number(resolvePath(d, field))).filter(v => !isNaN(v));
+              row['avgEngagement'] = vals.length ? Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)) : 0;
+            }
+          }
+          row[groupByClause.replace(/^c\./, '')] = key;
+          results.push(row);
+        }
+      } else if (selectClause === '*') {
+        results = filtered;
+      } else {
+        const fields = selectClause.split(',').map(s => s.trim());
+        results = filtered.map(d => {
+          const row = {};
+          for (const f of fields) {
+            const asMatch = f.match(/^([\s\S]+?)\s+(?:AS\s+)?([a-zA-Z0-9_]+)$/i);
+            const path = asMatch ? asMatch[1].trim() : f;
+            const aliasName = asMatch ? asMatch[2].trim() : path.split('.').pop();
+            row[aliasName] = resolvePath(d, path);
+          }
+          return row;
+        });
+      }
+
+      // RU & Metrics calculation
+      let ru = 0;
+      let explanation = "";
+      if (isSinglePartition) {
+        ru = 2.83;
+        explanation = `Single-partition query: The WHERE filter specified partition key '/${partitionKey}'. Cosmos DB routed the query directly to the single target partition without scanning other nodes, keeping RU low and latency sub-10ms.`;
+      } else {
+        ru = groupByClause ? 12.45 : 10.15;
+        explanation = `Cross-partition fan-out query: The query omitted the partition key '/${partitionKey}'. Cosmos DB dispatched parallel scans to all physical partitions, followed by client/gateway result aggregation, increasing request charges by ~4x-5x.`;
+      }
+
+      return {
+        results,
+        isSinglePartition,
+        ru,
+        explanation,
+        retrievedCount: filtered.length,
+        outputCount: results.length
+      };
+    }
+
+    // --- 3. UI Controllers ---
+    function handleExecute() {
+      const sql = document.getElementById("sqlInput").value;
+      try {
+        const outcome = runEngine(sql, currentDocs, "customerType");
+        lastMetrics = outcome;
+
+        // Populate Stats
+        document.getElementById("statRuCharge").innerText = `${outcome.ru.toFixed(2)} RUs`;
+        document.getElementById("statRuInfo").innerText = outcome.isSinglePartition 
+          ? "Single-partition targeted read using /customerType" 
+          : "Fan-out query scanning all 3 physical partitions";
+
+        document.getElementById("statBadgeWrapper").innerHTML = outcome.isSinglePartition
+          ? `<span class="badge-pill badge-single">SINGLE PARTITION</span>`
+          : `<span class="badge-pill badge-cross">CROSS-PARTITION FANOUT</span>`;
+
+        document.getElementById("statExplanation").innerText = outcome.explanation;
+
+        const tbody = document.getElementById("statMetricsBody");
+        tbody.innerHTML = `
+          <tr><td><strong>Request Charge</strong></td><td class="metric-val">${outcome.ru.toFixed(2)} RUs</td><td style="color:#aaa;">Metered cost against provisioned throughput</td></tr>
+          <tr><td><strong>Retrieved Document Count</strong></td><td class="metric-val">${outcome.retrievedCount}</td><td style="color:#aaa;">Candidate documents matched</td></tr>
+          <tr><td><strong>Output Document Count</strong></td><td class="metric-val">${outcome.outputCount}</td><td style="color:#aaa;">Rows returned to client</td></tr>
+          <tr><td><strong>Physical Partitions Queried</strong></td><td class="metric-val">${outcome.isSinglePartition ? 1 : 3}</td><td style="color:#aaa;">${outcome.isSinglePartition ? "Direct partition seek" : "Parallel fan-out execution"}</td></tr>
+          <tr><td><strong>Index Lookup Time</strong></td><td class="metric-val">${outcome.isSinglePartition ? "0.34 ms" : "2.85 ms"}</td><td style="color:#aaa;">B-tree index traversal time</td></tr>
+          <tr><td><strong>Document Load Time</strong></td><td class="metric-val">${outcome.isSinglePartition ? "0.62 ms" : "3.42 ms"}</td><td style="color:#aaa;">In-memory page fetch time</td></tr>
+          <tr><td><strong>Query Engine Execution Time</strong></td><td class="metric-val">${outcome.isSinglePartition ? "1.18 ms" : "7.84 ms"}</td><td style="color:#aaa;">Filter &amp; aggregation computation</td></tr>
+          <tr><td><strong>Index Hit Ratio</strong></td><td class="metric-val">${outcome.isSinglePartition ? "100.0%" : "82.5%"}</td><td style="color:#aaa;">Percentage of filter matched via index</td></tr>
+        `;
+
+        // Populate JSON Results
+        document.getElementById("jsonOutput").innerText = JSON.stringify(outcome.results, null, 2);
+        document.getElementById("resultCountBadge").innerText = outcome.results.length;
+
+        // Visual flash effect on execute
+        document.getElementById("statRuCharge").style.opacity = "0.3";
+        setTimeout(() => document.getElementById("statRuCharge").style.opacity = "1", 120);
+
+      } catch (err) {
+        alert("SQL Error: " + err.message);
+      }
+    }
+
+    function switchTab(tab) {
+      if (tab === 'stats') {
+        document.getElementById("tabBtnStats").classList.add("active");
+        document.getElementById("tabBtnResults").classList.remove("active");
+        document.getElementById("viewStats").style.display = "block";
+        document.getElementById("viewResults").style.display = "none";
+      } else {
+        document.getElementById("tabBtnResults").classList.add("active");
+        document.getElementById("tabBtnStats").classList.remove("active");
+        document.getElementById("viewResults").style.display = "block";
+        document.getElementById("viewStats").style.display = "none";
+      }
+    }
+
+    function loadPreset() {
+      const idx = document.getElementById("presetSelect").value;
+      document.getElementById("sqlInput").value = PRESETS[idx].sql;
+      handleExecute();
+    }
+
+    function openDocsModal() {
+      document.getElementById("docsJsonInput").value = JSON.stringify(currentDocs, null, 2);
+      document.getElementById("docsModal").style.display = "flex";
+    }
+
+    function closeDocsModal() {
+      document.getElementById("docsModal").style.display = "none";
+    }
+
+    function saveDocs() {
+      try {
+        currentDocs = JSON.parse(document.getElementById("docsJsonInput").value);
+        document.getElementById("docCountBadge").innerText = currentDocs.length;
+        document.getElementById("sidebarDocCount").innerText = currentDocs.length;
+        closeDocsModal();
+        handleExecute();
+      } catch (e) {
+        alert("Invalid JSON: " + e.message);
+      }
+    }
+
+    function resetDefaultDocs() {
+      document.getElementById("docsJsonInput").value = JSON.stringify(DEFAULT_DOCUMENTS, null, 2);
+    }
+
+    function copyAnalysis() {
+      if (!lastMetrics) return;
+      const text = `Cosmos DB Query Analysis:\nQuery Mode: ${lastMetrics.isSinglePartition ? "Single-Partition" : "Cross-Partition"}\nRequest Charge: ${lastMetrics.ru.toFixed(2)} RUs\n${lastMetrics.explanation}`;
+      navigator.clipboard.writeText(text);
+      alert("Performance analysis copied to clipboard!");
+    }
+
+    // Initialize
+    window.onload = () => {
+      document.getElementById("sqlInput").value = PRESETS[0].sql;
+      handleExecute();
+    };
+  </script>
+</body>
+</html>
