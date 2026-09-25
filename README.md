@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-5.2-purple)](https://vitejs.dev/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-success)](https://suryanshsaraf.github.io/nanocosmos/)
 [![Zero Backend](https://img.shields.io/badge/Backend-Zero%20Install-green)](https://github.com/Suryanshsaraf/nanocosmos)
 
 ---
