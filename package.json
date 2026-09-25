@@ -1,0 +1,27 @@
+{
+  "name": "nanocosmos",
+  "version": "0.1.0",
+  "description": "Zero-dependency, in-browser Azure Cosmos DB SQL query engine & visual Request Unit (RU) profiler",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "cosmosdb",
+    "azure",
+    "nosql",
+    "sql-engine",
+    "in-memory",
+    "playground",
+    "request-units",
+    "ru-calculator"
+  ],
+  "author": "Suryansh Saraf",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0"
+  }
+}
