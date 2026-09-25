@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-5.2-purple)](https://vitejs.dev/)
-[![Zero Backend](https://img.shields.io/badge/Backend-Zero%20Install-green)](https://github.com)
+[![Zero Backend](https://img.shields.io/badge/Backend-Zero%20Install-green)](https://github.com/Suryanshsaraf/nanocosmos)
 
 ---
 
@@ -150,4 +150,4 @@ NanoCosmos models Azure Cosmos DB's provisioned throughput metrics:
 
 ## 📄 License
 
-MIT License. Designed and maintained by [Suryansh Saraf](https://github.com).
+MIT License. Designed and maintained by [Suryansh Saraf](https://github.com/Suryanshsaraf).
